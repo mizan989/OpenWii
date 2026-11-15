@@ -243,7 +243,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('  🕹  OpenWii — your phone is the remote');
   console.log(line);
   console.log(`  Launcher      ${scheme}://localhost:${PORT}/`);
-  console.log(`  Phone remote  ${controllerUrl}`);
+  console.log(`  Phone remote  ${localControllerUrl}`);
   const games = listGames();
   console.log(`\n  ${games.length} game${games.length === 1 ? '' : 's'}:`);
   for (const g of games) console.log(`    ${g.emoji}  ${g.title}  →  ${g.url}`);
