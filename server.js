@@ -88,16 +88,30 @@ const server = tls ? https.createServer(tls, app) : http.createServer(app);
 const scheme = tls ? 'https' : 'http';
 
 const lanIp = localAddresses()[0] || 'localhost';
-const controllerUrl = `${scheme}://${lanIp}:${PORT}/controller`;
+const localControllerUrl = `${scheme}://${lanIp}:${PORT}/controller`;
+
+function getControllerUrl(req) {
+  if (process.env.PUBLIC_URL) {
+    return `${process.env.PUBLIC_URL.replace(/\/+$/, '')}/controller`;
+  }
+
+  const host = req.get('x-forwarded-host') || req.get('host');
+  const protocol = req.get('x-forwarded-proto')?.split(',')[0] || req.protocol;
+
+  return `${protocol}://${host}/controller`;
+}
 
 // The PC client fetches this to render a scannable join code.
-app.get('/api/pairing', async (_req, res) => {
+app.get('/api/pairing', async (req, res) => {
   try {
+    const controllerUrl = getControllerUrl(req);
+
     const qr = await QRCode.toDataURL(controllerUrl, {
       margin: 1,
       width: 320,
       color: { dark: '#0b0e14', light: '#ffffff' },
     });
+
     res.json({ url: controllerUrl, qr });
   } catch (err) {
     res.status(500).json({ error: err.message });
