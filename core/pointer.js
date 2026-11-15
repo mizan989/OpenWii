@@ -81,7 +81,7 @@ const AXES = ['x', 'y', 'z'];
 
 export class Pointer {
   constructor(options = {}) {
-    this.sensitivity = options.sensitivity ?? 1;
+    this.sensitivity = options.sensitivity ?? 0.25;
     // Degrees of turn to cross the full screen width at sensitivity 1.
     // (Was 30; rebased to 20 so the old "150% speed" is the new 100%.)
     this.degPerScreen = options.degPerScreen ?? 20;
