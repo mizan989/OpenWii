@@ -502,3 +502,13 @@ test('the default pointer speed is the rebased 20°-per-screen (old 150%)', () =
   assert.equal(new Pointer({}).degPerScreen, 20);
   assert.equal(new Pointer({}).sensitivity, 1);
 });
+
+test('button control sample.cursor updates pointer position directly', () => {
+  const p = new Pointer({});
+  const now = performance.now();
+  p.update({ cursor: { x: 0.25, y: 0.75 } }, 0.016, now);
+  assert.equal(p.live, true);
+  const pos = p.sampleAt(now);
+  assert.ok(Math.abs(pos.x - 0.25) < 1e-4);
+  assert.ok(Math.abs(pos.y - 0.75) < 1e-4);
+});

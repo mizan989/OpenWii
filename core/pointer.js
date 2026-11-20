@@ -81,7 +81,7 @@ const AXES = ['x', 'y', 'z'];
 
 export class Pointer {
   constructor(options = {}) {
-    this.sensitivity = options.sensitivity ?? 0.25;
+    this.sensitivity = options.sensitivity ?? 1;
     // Degrees of turn to cross the full screen width at sensitivity 1.
     // (Was 30; rebased to 20 so the old "150% speed" is the new 100%.)
     this.degPerScreen = options.degPerScreen ?? 20;
@@ -218,6 +218,17 @@ export class Pointer {
 
   /** Feed one packet from the phone. `dt` = seconds since the previous one. */
   update(sample, dt, now = 0) {
+    if (sample.cursor) {
+      this.setFromMouse(sample.cursor.x, sample.cursor.y);
+      this.rateDps = { yaw: 0, pitch: 0 };
+      this.rate.x = 0;
+      this.rate.y = 0;
+      this.emaRate = { x: 0, y: 0 };
+      this.emaAbsDps = 0;
+      this.live = true;
+      this.lastSeen = now || performance.now();
+      return;
+    }
     const axes = axesFromSample(sample);
     this.source = sample.quat ? 'quaternion' : 'euler';
     this.live = true;

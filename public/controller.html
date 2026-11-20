@@ -28,44 +28,85 @@
   .dot.on  { background: #35d07f; box-shadow: 0 0 10px #35d07f88; }
   .dot.err { background: #ff5f6d; }
 
-  /* ── The remote ──────────────────────────────────────────────────────── */
-  #stage { flex: 1; display: flex; perspective: 900px; min-height: 0; }
+  /* ── The remote (Horizontal layout) ──────────────────────────────────── */
+  #stage {
+    flex: 1;
+    display: flex;
+    perspective: 900px;
+    min-height: 0;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    overflow: hidden;
+    padding: 8px;
+    box-sizing: border-box;
+  }
   #remote {
-    width: min(86vw, 330px); margin: auto; height: 100%; max-height: 780px;
-    display: flex; flex-direction: column; align-items: center;
-    padding: clamp(8px, calc(1.8 * var(--remote-vh, 1vh)), 20px) 24px clamp(6px, calc(1.4 * var(--remote-vh, 1vh)), 14px);
-    gap: clamp(3px, calc(1 * var(--remote-vh, 1vh)), 12px);
-    background: linear-gradient(175deg, #fdfdfe, #eef1f5 55%, #e2e7ed);
-    border: 1px solid #cfd6de; border-radius: 34px;
-    box-shadow: 0 26px 70px #000a, inset 0 2px 0 #fff, inset 0 -16px 34px #00000012;
+    container-type: inline-size;
+    container-name: remote;
+    width: min(94vw, calc(65vh * 4.6), 800px);
+    aspect-ratio: 4.6 / 1;
+    max-height: 75vh;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 clamp(8px, 2.5cqw, 22px);
+    gap: clamp(2px, 0.9cqw, 8px);
+    background: linear-gradient(180deg, #fdfdfe, #eef1f5 55%, #e2e7ed);
+    border: 1px solid #cfd6de;
+    border-radius: clamp(18px, 5.2cqw, 40px);
+    box-shadow: 0 20px 60px #000a, inset 0 2px 0 #fff, inset 0 -12px 24px #00000012;
     transition: filter .45s ease;
-    transform-style: preserve-3d; will-change: transform;
+    transform-style: preserve-3d;
+    will-change: transform;
+    box-sizing: border-box;
+    overflow: hidden;
   }
   #remote.asleep { filter: grayscale(.55) brightness(.72); }
-  .sp { flex: 1; }
+  .sp { display: none !important; }
 
   button { font: inherit; color: inherit; border: none; background: none; padding: 0; }
   button:active { }
 
-  /* Power — white face with the red icon, like the real one. Still doubles
-     as the connection light: soft blue halo when linked to the PC, red halo
-     when the server is unreachable. */
-  #row-top { width: 100%; display: flex; flex: none; position: relative;
-             align-items: flex-start; min-height: clamp(38px, calc(6 * var(--remote-vh, 1vh)), 48px); }
+  /* Power & brand on the left */
+  #row-top {
+    width: auto;
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(2px, 0.5cqw, 5px);
+    min-height: 0;
+  }
   #pwr-wrap { display: flex; flex-direction: column; align-items: center; }
   #power {
-    width: clamp(30px, calc(4.6 * var(--remote-vh, 1vh)), 38px); height: clamp(30px, calc(4.6 * var(--remote-vh, 1vh)), 38px); border-radius: 50%;
+    width: clamp(18px, 4.2cqw, 28px);
+    height: clamp(18px, 4.2cqw, 28px);
+    border-radius: 50%;
     background: linear-gradient(180deg, #ffffff, #e8edf2);
     border: 1px solid #c6cfd9;
-    color: #d92b1f; font-size: 15px;
+    color: #d92b1f;
+    font-size: clamp(9px, 1.8cqw, 13px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     box-shadow: 0 2px 4px #0002, inset 0 1px 0 #fff;
     transition: box-shadow .4s ease;
   }
   #power:active { transform: translateY(1px); }
   #power.linked { box-shadow: 0 2px 4px #0002, inset 0 1px 0 #fff, 0 0 14px #45a6ff66; }
   #power.err { box-shadow: 0 2px 4px #0002, inset 0 1px 0 #fff, 0 0 14px #ff5f6d99; }
-  #brand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-           font-size: clamp(13px, calc(2 * var(--remote-vh, 1vh)), 16px); font-weight: 700; color: #aab7c4; }
+  #brand {
+    position: static;
+    transform: none;
+    font-size: clamp(8px, 1.3cqw, 11px);
+    font-weight: 700;
+    color: #aab7c4;
+    letter-spacing: 0.05em;
+  }
 
   /* D-pad: a solid cross. Sized by viewport height so short phones still fit
      the whole face; segments are percentages of the pad, not pixels. */
@@ -77,21 +118,26 @@
        composited silhouette, giving one cross-shaped shadow;
      - the centre paints last, borderless and a hair oversized, covering the
        arms' inner border edges. */
-  #dpad { position: relative; width: clamp(84px, calc(15 * var(--remote-vh, 1vh)), 128px); height: clamp(84px, calc(15 * var(--remote-vh, 1vh)), 128px);
-          flex: none; filter: drop-shadow(0 3px 6px rgba(30, 50, 80, .16)); }
+  #dpad {
+    position: relative;
+    width: clamp(48px, 13.5cqw, 92px);
+    height: clamp(48px, 13.5cqw, 92px);
+    flex: 0 0 auto;
+    filter: drop-shadow(0 2px 5px rgba(30, 50, 80, .16));
+  }
   .dp {
     position: absolute; width: 34.4%; height: 34.4%;
     border: 1px solid #c6cfd9;
     box-shadow: inset 0 1px 0 #fff;
   }
   .dp:active { filter: brightness(0.93); }
-  .dp.u { left: 32.8%; top: 0;    border-radius: 10px 10px 0 0;
+  .dp.u { left: 32.8%; top: 0;    border-radius: clamp(3px, 1cqw, 8px) clamp(3px, 1cqw, 8px) 0 0;
           background: linear-gradient(180deg, #ffffff, #f3f6f8); }
-  .dp.d { left: 32.8%; bottom: 0; border-radius: 0 0 10px 10px;
+  .dp.d { left: 32.8%; bottom: 0; border-radius: 0 0 clamp(3px, 1cqw, 8px) clamp(3px, 1cqw, 8px);
           background: linear-gradient(180deg, #ebeff3, #e6ebf0); }
-  .dp.l { left: 0;     top: 32.8%; border-radius: 10px 0 0 10px;
+  .dp.l { left: 0;     top: 32.8%; border-radius: clamp(3px, 1cqw, 8px) 0 0 clamp(3px, 1cqw, 8px);
           background: linear-gradient(180deg, #f3f6f8, #ebeff3); }
-  .dp.r { right: 0;    top: 32.8%; border-radius: 0 10px 10px 0;
+  .dp.r { right: 0;    top: 32.8%; border-radius: 0 clamp(3px, 1cqw, 8px) clamp(3px, 1cqw, 8px) 0;
           background: linear-gradient(180deg, #f3f6f8, #ebeff3); }
   .dp.c { left: calc(32.8% - 1.5px); top: calc(32.8% - 1.5px);
           width: calc(34.4% + 3px); height: calc(34.4% + 3px);
@@ -100,7 +146,7 @@
           pointer-events: none; z-index: 1; }
   .dp::after {
     content: ''; position: absolute; left: 50%; top: 50%; width: 0; height: 0;
-    border: 7px solid transparent; opacity: .45;
+    border: clamp(3px, 0.8cqw, 6px) solid transparent; opacity: .45;
   }
   .dp.u::after { border-bottom-color: #5a6c80; transform: translate(-50%, -80%); }
   .dp.d::after { border-top-color: #5a6c80;    transform: translate(-50%, -20%); }
@@ -108,71 +154,124 @@
   .dp.r::after { border-left-color: #5a6c80;   transform: translate(-20%, -50%); }
   .dp.c::after { display: none; }
 
-  /* A — the hero button. */
+  /* A — the hero button */
   #btn-a {
-    width: clamp(64px, calc(12 * var(--remote-vh, 1vh)), 96px); height: clamp(64px, calc(12 * var(--remote-vh, 1vh)), 96px);
-    border-radius: 50%; flex: none;
+    width: clamp(36px, 9.6cqw, 66px);
+    height: clamp(36px, 9.6cqw, 66px);
+    border-radius: 50%;
+    flex: 0 0 auto;
     background: linear-gradient(180deg, #ffffff, #eef2f6);
     border: 1px solid #c6cfd9;
-    box-shadow: 0 4px 10px #0003, inset 0 2px 0 #fff, inset 0 -6px 12px #a9b6c322;
-    color: #55708e; font-size: clamp(26px, calc(4.8 * var(--remote-vh, 1vh)), 38px); font-weight: 700;
+    box-shadow: 0 3px 8px #0003, inset 0 2px 0 #fff, inset 0 -4px 10px #a9b6c322;
+    color: #55708e;
+    font-size: clamp(16px, 4.2cqw, 28px);
+    font-weight: 700;
     transition: transform .06s ease;
+    display: flex; align-items: center; justify-content: center;
   }
   #btn-a:active {
     transform: scale(.94);
     box-shadow: 0 1px 3px #0003, inset 0 3px 9px #8fa1b455;
   }
 
-  /* B — the underside trigger, peeking in. */
+  /* B — round button beside A in horizontal layout */
   #btn-b {
-    width: 62%; height: clamp(38px, calc(6 * var(--remote-vh, 1vh)), 46px);
-    border-radius: 14px 14px 22px 22px; flex: none;
+    width: clamp(28px, 7.4cqw, 50px);
+    height: clamp(28px, 7.4cqw, 50px);
+    border-radius: 50%;
+    flex: 0 0 auto;
     background: linear-gradient(180deg, #a7b0ba, #8a939d);
     box-shadow: inset 0 1px 0 #ffffff44, 0 3px 7px #0003;
-    color: #fff; font-size: 22px; font-weight: 700;
+    color: #fff;
+    font-size: clamp(12px, 3cqw, 19px);
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
   }
-  #btn-b:active { transform: translateY(2px); filter: brightness(1.2); }
+  #btn-b:active { transform: translateY(1px); filter: brightness(1.2); }
 
   /* − ⌂ + */
-  #row-mid { display: flex; align-items: center; gap: 22px; flex: none; }
-  .pill {
-    width: clamp(34px, calc(5.4 * var(--remote-vh, 1vh)), 42px); height: clamp(34px, calc(5.4 * var(--remote-vh, 1vh)), 42px); border-radius: 50%;
-    background: linear-gradient(180deg, #f2f5f8, #dde3ea);
-    border: 1px solid #c6cfd9; box-shadow: 0 2px 4px #0002, inset 0 1px 0 #fff;
-    color: #5a6c80; font-size: 22px; font-weight: 700;
+  #row-mid {
+    display: flex;
+    align-items: center;
+    gap: clamp(3px, 0.8cqw, 7px);
+    flex: 0 0 auto;
   }
-  #btn-home { width: clamp(40px, calc(6.4 * var(--remote-vh, 1vh)), 50px); height: clamp(40px, calc(6.4 * var(--remote-vh, 1vh)), 50px); font-size: 21px;
-    background: linear-gradient(180deg, #4a5560, #39424c); border-color: #2e363f;
-    color: #e8ecf4; }
+  .pill {
+    width: clamp(18px, 4.6cqw, 30px);
+    height: clamp(18px, 4.6cqw, 30px);
+    border-radius: 50%;
+    background: linear-gradient(180deg, #f2f5f8, #dde3ea);
+    border: 1px solid #c6cfd9;
+    box-shadow: 0 2px 4px #0002, inset 0 1px 0 #fff;
+    color: #5a6c80;
+    font-size: clamp(11px, 2.5cqw, 17px);
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #btn-home {
+    width: clamp(22px, 5.2cqw, 36px);
+    height: clamp(22px, 5.2cqw, 36px);
+    font-size: clamp(12px, 2.8cqw, 18px);
+    background: linear-gradient(180deg, #4a5560, #39424c);
+    border-color: #2e363f;
+    color: #e8ecf4;
+  }
   .pill:active { transform: scale(.92); box-shadow: 0 1px 2px #0002, inset 0 2px 6px #8fa1b444; }
   .pill small { display: block; font-size: 8px; font-weight: 600; letter-spacing: .04em;
                 color: #93a3b4; margin-top: -3px; }
 
-  /* Speaker grille — pulses when the remote "speaks". */
-  #speaker { display: grid; grid-template-columns: repeat(5, 7px);
-             gap: clamp(5px, calc(1 * var(--remote-vh, 1vh)), 8px) 8px; flex: none; }
+  /* Speaker grille */
+  #speaker {
+    display: grid;
+    grid-template-columns: repeat(4, clamp(3px, 0.6cqw, 5px));
+    gap: clamp(2px, 0.6cqw, 5px);
+    flex: 0 0 auto;
+  }
   #speaker i {
-    width: 7px; height: 7px; border-radius: 50%; background: #c3ccd5;
-    box-shadow: inset 0 1px 1px #0002; transition: background .12s, box-shadow .12s;
+    width: clamp(3px, 0.6cqw, 5px);
+    height: clamp(3px, 0.6cqw, 5px);
+    border-radius: 50%;
+    background: #c3ccd5;
+    box-shadow: inset 0 1px 1px #0002;
+    transition: background .12s, box-shadow .12s;
   }
   #speaker.talk i { background: #6fb2ff; box-shadow: 0 0 8px #6fb2ff88; }
 
   /* 1 / 2 */
-  #ones { display: flex; flex-direction: column; gap: clamp(6px, calc(1.2 * var(--remote-vh, 1vh)), 12px);
-          align-items: center; flex: none; }
+  #ones {
+    display: flex;
+    flex-direction: row;
+    gap: clamp(3px, 1cqw, 8px);
+    align-items: center;
+    flex: 0 0 auto;
+  }
   .num {
-    width: clamp(34px, calc(5.8 * var(--remote-vh, 1vh)), 46px); height: clamp(34px, calc(5.8 * var(--remote-vh, 1vh)), 46px); border-radius: 50%;
+    width: clamp(22px, 5.2cqw, 36px);
+    height: clamp(22px, 5.2cqw, 36px);
+    border-radius: 50%;
     background: linear-gradient(180deg, #f2f5f8, #dde3ea);
-    border: 1px solid #c6cfd9; box-shadow: 0 2px 4px #0002, inset 0 1px 0 #fff;
-    color: #5a6c80; font-size: 19px; font-weight: 700;
+    border: 1px solid #c6cfd9;
+    box-shadow: 0 2px 4px #0002, inset 0 1px 0 #fff;
+    color: #5a6c80;
+    font-size: clamp(12px, 2.8cqw, 17px);
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
   }
   .num:active { transform: scale(.92); box-shadow: inset 0 2px 6px #8fa1b444; }
 
-  /* Player LEDs. */
-  #leds { display: flex; gap: 14px; flex: none;
-          margin-bottom: clamp(4px, calc(1.2 * var(--remote-vh, 1vh)), 12px); }
+  /* Player LEDs */
+  #leds {
+    display: flex;
+    flex-direction: row;
+    gap: clamp(3px, 0.8cqw, 6px);
+    flex: 0 0 auto;
+    align-items: center;
+  }
   #leds i {
-    width: 13px; height: 8px; border-radius: 2.5px; background: #c3ccd5;
+    width: clamp(4px, 0.9cqw, 7px);
+    height: clamp(6px, 1.4cqw, 10px);
+    border-radius: 2px;
+    background: #c3ccd5;
     box-shadow: inset 0 1px 1px #0003;
   }
   #leds i.on { background: #45c1ff; box-shadow: 0 0 9px #45c1ffcc; }
@@ -183,22 +282,6 @@
   @keyframes led-seek {
     0%, 60%, 100% { background: #c3ccd5; box-shadow: inset 0 1px 1px #0003; }
     20% { background: #45c1ff; box-shadow: 0 0 9px #45c1ffcc; }
-  }
-
-
-  /* Landscape / very short: drop the decorative rows, tuck 1 and 2 side by
-     side, and let the big controls shrink further. */
-  @media (max-height: 560px) {
-    body:not(.wheel-mode) #speaker { display: none; }
-    body:not(.wheel-mode) #remote { gap: 2px; padding: 8px 24px 6px; }
-    body:not(.wheel-mode) #ones { flex-direction: row; gap: 10px; }
-    body:not(.wheel-mode) #dpad { width: clamp(64px, calc(15 * var(--remote-vh, 1vh)), 128px); height: clamp(64px, calc(15 * var(--remote-vh, 1vh)), 128px); }
-    body:not(.wheel-mode) #btn-a { width: clamp(50px, calc(12 * var(--remote-vh, 1vh)), 96px); height: clamp(50px, calc(12 * var(--remote-vh, 1vh)), 96px); }
-    body:not(.wheel-mode) #btn-b { height: clamp(30px, calc(6 * var(--remote-vh, 1vh)), 46px); }
-    body:not(.wheel-mode) #power { width: 30px; height: 30px; }
-    body:not(.wheel-mode) .num { width: clamp(30px, calc(5.8 * var(--remote-vh, 1vh)), 46px); height: clamp(30px, calc(5.8 * var(--remote-vh, 1vh)), 46px); }
-    body:not(.wheel-mode) .pill { width: clamp(28px, calc(5.4 * var(--remote-vh, 1vh)), 42px); height: clamp(28px, calc(5.4 * var(--remote-vh, 1vh)), 42px); }
-    body:not(.wheel-mode) #btn-home { width: clamp(32px, calc(6.4 * var(--remote-vh, 1vh)), 50px); height: clamp(32px, calc(6.4 * var(--remote-vh, 1vh)), 50px); }
   }
 
   /* ── Wake gate ───────────────────────────────────────────────────────── */
@@ -317,8 +400,8 @@ body.wheel-mode::before {content:'';position:fixed;inset:0;background:#10141c;po
   <div id="gate">
     <div class="card">
       <h1>🕹 Wake the remote</h1>
-      <p>Grant motion access, then hold the phone however feels natural and point it at the screen.</p>
-      <button id="enable">Enable motion sensors</button>
+      <p>Use the D-pad to move the mouse cursor, A to select, B for back.</p>
+      <button id="enable">Wake the remote</button>
     </div>
   </div>
 

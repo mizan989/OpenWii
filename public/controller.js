@@ -404,25 +404,44 @@ async function lockUpright() {
   } catch { /* unsupported (iOS) or denied — the phone's own lock still works */ }
 }
 
+const cursor = { x: 0.5, y: 0.5 };
+const dpadHeld = { up: false, down: false, left: false, right: false };
+
+function sendCursor() {
+  if (!streaming || !socket.connected) return;
+  const now = performance.now();
+  const alpha = (0.5 - cursor.x) * 40;
+  const beta = (0.5 - cursor.y) * 40 + 45;
+  socket.emit('orientation', {
+    alpha,
+    beta,
+    gamma: 0,
+    cursor: { x: cursor.x, y: cursor.y },
+    t: now,
+  });
+  sent += 1;
+}
+
 els.enable.addEventListener('click', async () => {
   els.enable.disabled = true;
   phoneAudioUnlock();
   try {
     await requestSensors();
-    streaming = true;
-    enabledAt = performance.now();
-    els.gate.classList.add('hide');
-    els.remote.classList.remove('asleep');
-    buzz([10, 40, 18]);
-    speakerTalk(400);
-    keepAwake();
-    lockUpright();
-    // Zero the mapping the moment the sword goes live.
-    socket.emit('command', { type: 'calibrate' });
   } catch (err) {
-    els.enable.disabled = false;
-    setNet(err.message, 'err');
+    console.log('[controller] motion sensor unavailable:', err.message);
   }
+  streaming = true;
+  enabledAt = performance.now();
+  els.gate.classList.add('hide');
+  els.remote.classList.remove('asleep');
+  buzz([10, 40, 18]);
+  speakerTalk(400);
+  keepAwake();
+  lockUpright();
+  cursor.x = 0.5;
+  cursor.y = 0.5;
+  sendCursor();
+  socket.emit('command', { type: 'calibrate' });
 });
 
 // ── The remote's buttons ───────────────────────────────────────────────────
@@ -444,12 +463,97 @@ onPress(els.btnB, () => socket.emit('command', { type: 'button', button: 'B' }),
 onPress(els.btnHome, () => socket.emit('command', { type: 'button', button: 'B' }), 10);
 onPress(els.btnMinus, () => socket.emit('command', { type: 'speed', factor: 1 / 1.12 }), 6);
 onPress(els.btnPlus, () => socket.emit('command', { type: 'speed', factor: 1.12 }), 6);
-onPress(els.btn1, () => socket.emit('command', { type: 'recentre' }), 8);
+onPress(els.btn1, () => {
+  cursor.x = 0.5;
+  cursor.y = 0.5;
+  sendCursor();
+  socket.emit('command', { type: 'recentre' });
+}, 8);
 onPress(els.btn2, () => els.sheet.classList.toggle('open'), 8);
 onPress(els.power, () => speakerTalk(250), [5, 30, 10]);
-for (const dp of document.querySelectorAll('.dp')) {
-  if (dp.tagName === 'BUTTON') onPress(dp, () => {}, 6);
+
+// D-pad control buttons for mouse cursor
+const dpButtons = {
+  up: document.querySelector('.dp.u'),
+  down: document.querySelector('.dp.d'),
+  left: document.querySelector('.dp.l'),
+  right: document.querySelector('.dp.r'),
+};
+
+for (const [dir, el] of Object.entries(dpButtons)) {
+  if (!el) continue;
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (wheelMode) return;
+    try { el.setPointerCapture(e.pointerId); } catch {}
+
+    // Resolve screen-relative direction so it matches the visual orientation exactly
+    const b = el.getBoundingClientRect();
+    const d = document.getElementById('dpad').getBoundingClientRect();
+    const cx = b.x + b.width / 2 - (d.x + d.width / 2);
+    const cy = b.y + b.height / 2 - (d.y + d.height / 2);
+    const activeDir = Math.abs(cx) > Math.abs(cy)
+      ? (cx < 0 ? 'left' : 'right')
+      : (cy < 0 ? 'up' : 'down');
+
+    el._activeDir = activeDir;
+    dpadHeld[activeDir] = true;
+    buzz(8);
+    socket.emit('command', { type: 'button', button: dir, menuDirection: activeDir, pressed: true });
+    sendCursor();
+  });
+  const release = (e) => {
+    const activeDir = el._activeDir || dir;
+    if (dpadHeld[activeDir]) {
+      dpadHeld[activeDir] = false;
+      socket.emit('command', { type: 'button', button: dir, menuDirection: activeDir, pressed: false });
+    }
+  };
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointercancel', release);
+  el.addEventListener('lostpointercapture', release);
 }
+
+// Keyboard controls for desktop testing
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  const k = e.key;
+  let dir = null;
+  if (k === 'ArrowUp' || k === 'w' || k === 'W') dir = 'up';
+  else if (k === 'ArrowDown' || k === 's' || k === 'S') dir = 'down';
+  else if (k === 'ArrowLeft' || k === 'a' || k === 'A') dir = 'left';
+  else if (k === 'ArrowRight' || k === 'd' || k === 'D') dir = 'right';
+  else if (k === ' ' || k === 'Enter') {
+    e.preventDefault();
+    socket.emit('command', { type: 'button', button: 'A' });
+    pSound('click');
+    buzz(12);
+  } else if (k === 'Escape' || k === 'Backspace') {
+    e.preventDefault();
+    socket.emit('command', { type: 'button', button: 'B' });
+    buzz(10);
+  }
+  if (dir) {
+    e.preventDefault();
+    dpadHeld[dir] = true;
+    buzz(8);
+    socket.emit('command', { type: 'button', button: dir, pressed: true });
+    sendCursor();
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  const k = e.key;
+  let dir = null;
+  if (k === 'ArrowUp' || k === 'w' || k === 'W') dir = 'up';
+  else if (k === 'ArrowDown' || k === 's' || k === 'S') dir = 'down';
+  else if (k === 'ArrowLeft' || k === 'a' || k === 'A') dir = 'left';
+  else if (k === 'ArrowRight' || k === 'd' || k === 'D') dir = 'right';
+  if (dir && dpadHeld[dir]) {
+    dpadHeld[dir] = false;
+    socket.emit('command', { type: 'button', button: dir, pressed: false });
+  }
+});
 
 // A short renewable profile lease prevents a closed game leaving a phone in
 // wheel mode. Old games never ask for it and retain their original controls.
@@ -568,32 +672,15 @@ let hzMark = performance.now();
 let lastSensorCount = 0;
 
 /**
- * Surface the two failure modes that otherwise look identical from the phone:
- * sensors not firing at all, vs. sensors fine but packets not reaching the PC.
+ * Surface diagnostics in button-2 sheet.
  */
 function updateDiagnostics(now, elapsed) {
   const sensorHz = Math.round(((sensorEvents - lastSensorCount) * 1000) / elapsed);
   const sentHz = Math.round((sent * 1000) / elapsed);
   lastSensorCount = sensorEvents;
 
-  const source = usingGenericSensor ? 'OrientationSensor' : 'deviceorientation';
   els.hz.textContent = `${sentHz} Hz`;
-  els.rates.textContent = `sensor ${sensorHz} Hz · sent ${sentHz} Hz · ${transportName()} · ${source}`;
-
-  if (!streaming) return;
-  if (sensorEvents === 0 && now - enabledAt > 3500) {
-    // The generic-sensor path reports its own, more specific errors; don't
-    // stomp on them with a generic message.
-    if (!els.diag.classList.contains('hide')) return;
-    renderDiagnostics(
-      '⚠️ No sensor data',
-      rawEvents > 0
-        ? 'Orientation events are firing but arriving empty. Move the phone in a figure-8 to settle its compass.'
-        : 'No orientation events are firing. On iOS: Settings → Apps → Safari → Motion & Orientation Access. On Chrome: ⋮ → Settings → Site settings → Motion sensors.',
-    );
-  } else if (sensorEvents > 0) {
-    els.diag.classList.add('hide');
-  }
+  els.rates.textContent = `cursor [${cursor.x.toFixed(2)}, ${cursor.y.toFixed(2)}] · sent ${sentHz} Hz · ${transportName()}`;
 }
 
 function transportName() {
@@ -622,21 +709,45 @@ function displayAngles(sample) {
   };
 }
 
-// The remote leans with the real one — a small parallax that makes the page
+// The remote leans with the cursor / tilt — a small parallax that makes the page
 // feel like an object rather than a form. Smoothed so it drifts, not jitters.
 const lean = { x: 0, y: 0 };
 const clampN = (v, m) => Math.max(-m, Math.min(m, v));
+let lastTick = performance.now();
+let lastCursorSend = 0;
 
 function tick(now) {
   requestAnimationFrame(tick);
+  const dt = Math.min((now - lastTick) / 1000, 0.1);
+  lastTick = now;
 
-  if (streaming && latest) {
-    const a = displayAngles(latest);
-    // beta ≈ 45° is a natural hold; lean relative to that, gently.
-    const tx = clampN((a.pitch - 40) * 0.14, 7);
-    const ty = clampN((a.roll || 0) * 0.18, 9);
-    lean.x += (tx - lean.x) * 0.12;
-    lean.y += (ty - lean.y) * 0.12;
+  if (streaming) {
+    let dx = 0, dy = 0;
+    if (dpadHeld.left) dx -= 1;
+    if (dpadHeld.right) dx += 1;
+    if (dpadHeld.up) dy -= 1;
+    if (dpadHeld.down) dy += 1;
+
+    if (dx !== 0 || dy !== 0) {
+      if (dx !== 0 && dy !== 0) {
+        const inv = 1 / Math.SQRT2;
+        dx *= inv;
+        dy *= inv;
+      }
+      const speed = 0.55;
+      cursor.x = Math.max(0, Math.min(1, cursor.x + dx * speed * dt));
+      cursor.y = Math.max(0, Math.min(1, cursor.y + dy * speed * dt));
+      sendCursor();
+      lastCursorSend = now;
+    } else if (now - lastCursorSend > 100) {
+      sendCursor();
+      lastCursorSend = now;
+    }
+
+    const leanTargetX = (cursor.y - 0.5) * 14;
+    const leanTargetY = (cursor.x - 0.5) * 14;
+    lean.x += (leanTargetX - lean.x) * 0.12;
+    lean.y += (leanTargetY - lean.y) * 0.12;
     els.remote.style.transform = `rotateX(${(-lean.x).toFixed(2)}deg) rotateY(${lean.y.toFixed(2)}deg)`;
   }
 
@@ -652,14 +763,3 @@ requestAnimationFrame(tick);
 
 // Kill pull-to-refresh / rubber-banding so swinging never scrolls the page.
 document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-
-// Preflight: an insecure origin can never read sensors, so say so up front
-// rather than letting the player tap Enable and watch nothing happen.
-if (!window.isSecureContext) {
-  els.enable.textContent = '⚠️ Sensors need HTTPS';
-  els.enable.disabled = true;
-  renderDiagnostics(
-    '⚠️ Not a secure page',
-    `Served from ${location.origin}. Browsers block motion sensors on insecure origins — and they do it silently. Restart with "npm start" (HTTPS) and open the https:// address.`,
-  );
-}
