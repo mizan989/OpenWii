@@ -391,29 +391,34 @@ const link = new GameLink({
       if (race?.state === "racing")
         pause("Level the wheel for a moment, then press 2 or Enter.");
     }
-    if (cmd.type === 'button' && cmd.pressed !== false) {
-      if (cmd.button === '2' && (paused || ['ready','results'].includes(race.state))) confirm();
+    if (cmd.type === 'button') {
+      const pressed = cmd.pressed !== false;
+      if (cmd.button === '2' && pressed && (paused || ['ready','results'].includes(race.state))) confirm();
       if (race.state === 'ready') {
-        if (['left','right','up','down'].includes(cmd.button)) navigateDriver(cmd.menuDirection || cmd.button);
-        if (cmd.button === '1') cancelDriver();
-      } else if (cmd.button === 'right' && !paused) itemPulse = true;
+        if (pressed && ['left','right','up','down'].includes(cmd.button)) navigateDriver(cmd.menuDirection || cmd.button);
+        if (pressed && cmd.button === '1') cancelDriver();
+      } else if (race.state === 'racing' || race.state === 'countdown') {
+        if (cmd.button === 'left') { if (pressed) keys.add('ArrowLeft'); else keys.delete('ArrowLeft'); }
+        if (cmd.button === 'right') { if (pressed) keys.add('ArrowRight'); else keys.delete('ArrowRight'); }
+        if (cmd.button === 'up' || cmd.button === 'A' || cmd.button === '2') { if (pressed) keys.add('KeyZ'); else keys.delete('KeyZ'); }
+        if (cmd.button === 'down') { if (pressed) keys.add('KeyX'); else keys.delete('KeyX'); }
+        if (cmd.button === 'B') { if (pressed) keys.add('ShiftLeft'); else keys.delete('ShiftLeft'); }
+        if (cmd.button === '1' && pressed && !paused) itemPulse = true;
+      }
     }
   },
   onPresence: (p) => {
     $("connection").textContent = p.controller
-      ? "PHONE CONNECTED · P1"
+      ? "REMOTE CONNECTED · P1"
       : "KEYBOARD READY";
     if (!p.controller) {
       wheel.release();
-      if (usingPhone && race?.state === "racing")
-        pause("Phone disconnected. Reconnect or continue with the keyboard.");
       usingPhone = false;
     }
-    sendProfile();
   },
 });
 function sendProfile() {
-  link.feedback({ type: "controller-profile", profile: "wheel", slot: 0 });
+  // Standard remote profile
 }
 const profileTimer = setInterval(sendProfile, 850);
 function onEvent(e) {

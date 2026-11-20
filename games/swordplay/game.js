@@ -118,21 +118,53 @@ let swinging = false;
 let swingFlash = 0;
 
 const duel = new Duel({ onEvent: handleEvent });
+let bladeAngle = 0;
+
+function triggerSlash(angle = bladeAngle) {
+  if (duel.state === 'ready' || duel.state === 'over') {
+    startMatch();
+    return;
+  }
+  if (duel.state !== 'fighting') return;
+  bladeAngle = angle;
+  swingFlash = 1;
+  duel.setBlade(angle, true);
+  duel.swing({ angle, peak: 420 }, performance.now());
+  setTimeout(() => duel.setBlade(bladeAngle, false), 150);
+}
 
 const channel = createChannel({
   onA: () => {
     if (duel.state === 'ready' || duel.state === 'over') startMatch();
+    else triggerSlash();
   },
   onSample: (sample, dt, now) => {
     lastAxes = axesFromSample(sample);
     const swing = swingDetector.update(channel.pointer.rateDps, dt, now);
     swinging = swingDetector.active;
-    duel.setBlade(lastAxes ? bladeScreenAngle(lastAxes) : 0, swinging);
+    duel.setBlade(lastAxes ? bladeScreenAngle(lastAxes) : bladeAngle, swinging);
     if (swing) {
       swingFlash = 1;
       duel.swing(swing, now);
     }
   },
+  onCommand: (cmd) => {
+    if (cmd.type === 'button') {
+      if (cmd.button === 'left') triggerSlash(-90);
+      else if (cmd.button === 'right') triggerSlash(90);
+      else if (cmd.button === 'up') triggerSlash(0);
+      else if (cmd.button === 'down') triggerSlash(180);
+      else if (cmd.button === 'A') triggerSlash();
+    }
+  },
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') triggerSlash(-90);
+  else if (e.key === 'ArrowRight') triggerSlash(90);
+  else if (e.key === 'ArrowUp') triggerSlash(0);
+  else if (e.key === 'ArrowDown') triggerSlash(180);
+  else if (e.key === ' ' || e.key === 'Enter') triggerSlash();
 });
 
 function startMatch() {

@@ -366,6 +366,10 @@ const channel = createChannel({
       trayRef = null;
       steerFilter = new SteerFilter();
     }
+    if (cmd.type === 'button') {
+      if (cmd.button === 'left') keys.ArrowLeft = cmd.pressed !== false;
+      if (cmd.button === 'right') keys.ArrowRight = cmd.pressed !== false;
+    }
   },
   onSample: (sample, dt, now) => {
     const axes = axesFromSample(sample);
@@ -508,10 +512,8 @@ function frame(now) {
   if (dt <= 0) return;
 
   channel.poll(now);
-  if (!channel.pointer.live) {
-    const bank = (keys.ArrowRight ? 15 : 0) + (keys.ArrowLeft ? -15 : 0);
-    if (bank || keys._touched) { game.setSteer(bank); keys._touched = true; }
-  }
+  const bank = (keys.ArrowRight ? 15 : 0) + (keys.ArrowLeft ? -15 : 0);
+  if (bank || keys._touched) { game.setSteer(bank); keys._touched = true; }
   game.update(now, dt);
   if (game.state === 'running') syncHud();
   if (popupUntil && now > popupUntil) { $('popup').classList.remove('on'); popupUntil = 0; }

@@ -170,6 +170,12 @@ const channel = createChannel({
     const tilt = gripTilt(axesFromSample(sample));
     race.setSteer(tilt.bank);
   },
+  onCommand: (cmd) => {
+    if (cmd.type === 'button') {
+      if (cmd.button === 'left') keys.ArrowLeft = cmd.pressed !== false;
+      if (cmd.button === 'right') keys.ArrowRight = cmd.pressed !== false;
+    }
+  },
 });
 
 const keys = {};
@@ -221,10 +227,8 @@ function frame(now) {
   if (now - fpsMark >= 500) { fps = (frames * 1000) / (now - fpsMark); frames = 0; fpsMark = now; }
 
   channel.poll(now);
-  if (!channel.pointer.live) {
-    const bank = (keys.ArrowRight ? 42 : 0) + (keys.ArrowLeft ? -42 : 0);
-    if (bank || keys._touched) { race.setSteer(bank); keys._touched = true; }
-  }
+  const bank = (keys.ArrowRight ? 42 : 0) + (keys.ArrowLeft ? -42 : 0);
+  if (bank || keys._touched) { race.setSteer(bank); keys._touched = true; }
   race.update(now, dt);
   step(now, dt);
   renderer.render(scene, camera);

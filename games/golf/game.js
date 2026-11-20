@@ -99,20 +99,39 @@ const swing = new SwingDetector({ onThreshold: 130, minTravel: 22 });
 const hole = new Hole({ onEvent: handleEvent });
 let started = false;
 
+function strikeBall(power = 0.82) {
+  if (!started || hole.state !== 'aim') return;
+  hole.strike(power);
+  channel.feedback({ type: 'slice', combo: 1 });
+  channel.audio.play('impact');
+  flashPower(power);
+}
+
 const channel = createChannel({
   onA: () => {
     if (!started || hole.state === 'holed') startRound();
+    else if (hole.state === 'aim') strikeBall(0.85);
   },
   onSample: (sample, dt, now) => {
     const s = swing.update(channel.pointer.rateDps, dt, now);
     if (s && started && hole.state === 'aim') {
       const power = Math.min(1, s.peak / 480);
-      hole.strike(power);
-      channel.feedback({ type: 'slice', combo: 1 });
-      channel.audio.play('impact');
-      flashPower(power);
+      strikeBall(power);
     }
   },
+  onCommand: (cmd) => {
+    if (cmd.type === 'button') {
+      if (cmd.button === 'up' || cmd.button === 'A') strikeBall(0.85);
+      else if (cmd.button === 'left') hole.aimOffset -= 0.05;
+      else if (cmd.button === 'right') hole.aimOffset += 0.05;
+    }
+  },
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp') strikeBall(0.85);
+  else if (e.key === 'ArrowLeft') hole.aimOffset -= 0.05;
+  else if (e.key === 'ArrowRight') hole.aimOffset += 0.05;
 });
 
 function startRound() {

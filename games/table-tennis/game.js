@@ -98,11 +98,23 @@ const swing = new SwingDetector({ onThreshold: 120, minTravel: 18 });
 const rally = new Rally({ onEvent: handleEvent });
 
 const channel = createChannel({
-  onA: () => { if (rally.state === 'ready' || rally.state === 'over') startGame(); },
+  onA: () => {
+    if (rally.state === 'ready' || rally.state === 'over') startGame();
+    else rally.swing(420);
+  },
   onSample: (sample, dt, now) => {
     const s = swing.update(channel.pointer.rateDps, dt, now);
     if (s) rally.swing(s.peak);
   },
+  onCommand: (cmd) => {
+    if (cmd.type === 'button') {
+      if (cmd.button === 'up' || cmd.button === 'A') rally.swing(420);
+    }
+  },
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp' || e.key === ' ') rally.swing(420);
 });
 
 function startGame() {

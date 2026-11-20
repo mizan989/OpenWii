@@ -113,6 +113,14 @@ const channel = createChannel({
     const tilt = gripTilt(axesFromSample(sample));
     flight.setTilt(tilt.bank, tilt.pitch);
   },
+  onCommand: (cmd) => {
+    if (cmd.type === 'button') {
+      if (cmd.button === 'left') keys.ArrowLeft = cmd.pressed !== false;
+      if (cmd.button === 'right') keys.ArrowRight = cmd.pressed !== false;
+      if (cmd.button === 'up') keys.ArrowUp = cmd.pressed !== false;
+      if (cmd.button === 'down') keys.ArrowDown = cmd.pressed !== false;
+    }
+  },
 });
 
 // Keyboard fallback for desk testing: arrows steer.
@@ -165,12 +173,9 @@ function frame(now) {
   if (now - fpsMark >= 500) { fps = (frames * 1000) / (now - fpsMark); frames = 0; fpsMark = now; }
 
   channel.poll(now);
-  if (!channel.pointer.live) {
-    // Desk fallback: arrow keys.
-    const bank = (keys.ArrowRight ? 40 : 0) + (keys.ArrowLeft ? -40 : 0);
-    const pitch = (keys.ArrowUp ? 25 : 0) + (keys.ArrowDown ? -25 : 0);
-    if (bank || pitch || keys._touched) { flight.setTilt(bank, pitch); keys._touched = true; }
-  }
+  const bank = (keys.ArrowRight ? 40 : 0) + (keys.ArrowLeft ? -40 : 0);
+  const pitch = (keys.ArrowUp ? 25 : 0) + (keys.ArrowDown ? -25 : 0);
+  if (bank || pitch || keys._touched) { flight.setTilt(bank, pitch); keys._touched = true; }
   flight.update(now, dt);
   step(now, dt);
   renderer.render(scene, camera);

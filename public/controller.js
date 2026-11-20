@@ -172,73 +172,10 @@ let usingGenericSensor = false;
 
 let orientationSource = null;
 
-function onOrientation(e) {
-  rawEvents += 1;
-
-  // Reject empty readings BEFORE latching onto a source. Some devices fire
-  // 'deviceorientationabsolute' with all-null values when the magnetometer
-  // hasn't calibrated; latching to that stream first would permanently lock
-  // out the perfectly good 'deviceorientation' events behind it.
-  if (e.alpha === null && e.beta === null && e.gamma === null) return;
-
-  // Android fires BOTH 'deviceorientation' (alpha relative to an arbitrary
-  // start heading) and 'deviceorientationabsolute' (alpha relative to true
-  // north). Letting both write here interleaves two different yaw origins, and
-  // the PC's frame-to-frame deltas become noise. Pick one stream and stay on
-  // it — absolute if this device offers it, since it doesn't drift.
-  if (e.type === 'deviceorientationabsolute') orientationSource = e.type;
-  else if (orientationSource === null) orientationSource = e.type;
-  if (e.type !== orientationSource) return;
-
-  sensorEvents += 1;
-  latest = {
-    alpha: e.alpha || 0,
-    beta: e.beta || 0,
-    gamma: e.gamma || 0,
-    // iOS exposes a true-north heading; useful as a drift-free yaw source.
-    heading: typeof e.webkitCompassHeading === 'number' ? e.webkitCompassHeading : null,
-  };
-  flush();
-}
-
-/**
- * Send the moment the sensor speaks.
- *
- * rAF-latching added up to a full frame of pure delay before the packet even
- * left the device — the rate cap below does the same job for free.
- */
-const MIN_EMIT_MS = 6;    // ~166Hz ceiling; real sensors run well under this
-let lastEmit = 0;
-
-function flush() {
-  if (!streaming || !latest) return;
-  const now = performance.now();
-  if (now - lastEmit < MIN_EMIT_MS) return;
-  lastEmit = now;
-  socket.emit('orientation', { ...latest, motion, t: now, ...(wheelMode ? { buttons: { ...heldButtons } } : {}) });
-  sent += 1;
-}
-
-function onMotion(e) {
-  const a = e.acceleration || e.accelerationIncludingGravity;
-  const r = e.rotationRate;
-  if (!a && !r) return;
-  motion = {
-    ax: a ? a.x || 0 : 0,
-    ay: a ? a.y || 0 : 0,
-    az: a ? a.z || 0 : 0,
-    // The raw gyroscope. Unlike `deviceorientation` — which is the OS's fused
-    // attitude estimate and carries that fusion's latency — this is a direct
-    // readout of angular velocity, and it is what makes the cursor feel
-    // immediate. The PC integrates it and corrects against orientation.
-    rz: r ? r.alpha || 0 : 0,
-    rx: r ? r.beta || 0 : 0,
-    ry: r ? r.gamma || 0 : 0,
-  };
-  // Send on the motion event too. Gating the gyro behind orientation events
-  // would throw away exactly the freshness we're here for.
-  flush();
-}
+// Motion sensors disabled — control is 100% arrow- and button-driven.
+function onOrientation(e) {}
+function flush() {}
+function onMotion(e) {}
 
 // ── Capability probe ───────────────────────────────────────────────────────
 /**
@@ -342,48 +279,8 @@ function startGenericSensor() {
 
 /** iOS 13+ requires an explicit, user-gesture-triggered permission grant. */
 async function requestSensors() {
-  const caps = capabilities();
-
-  // Refuse to pretend. Without a secure context nothing below can ever fire.
-  if (!caps.secureContext) {
-    await renderDiagnostics(
-      '⚠️ Not a secure page',
-      `This page is served from ${location.origin}, which browsers treat as insecure — motion sensors are blocked outright. Restart the server with "npm start" (HTTPS) and open the https:// address instead.`,
-    );
-    throw new Error('needs HTTPS for sensors');
-  }
-
-  if (!caps.deviceOrientationEvent && !caps.absoluteOrientationSensor && !caps.relativeOrientationSensor) {
-    await renderDiagnostics('⚠️ No orientation API', 'This browser exposes no orientation sensor API at all.');
-    throw new Error('no orientation API');
-  }
-
-  if (caps.requestPermission) {
-    const state = await DeviceOrientationEvent.requestPermission();
-    if (state !== 'granted') throw new Error('Motion permission denied');
-  }
-  if (typeof DeviceMotionEvent !== 'undefined'
-      && typeof DeviceMotionEvent.requestPermission === 'function') {
-    try { await DeviceMotionEvent.requestPermission(); } catch { /* optional */ }
-  }
-
-  // 'deviceorientation' is relative to an arbitrary start heading on some
-  // devices; the absolute variant is world-referenced where available.
-  window.addEventListener('deviceorientation', onOrientation, true);
-  window.addEventListener('deviceorientationabsolute', onOrientation, true);
-  window.addEventListener('devicemotion', onMotion, true);
-
-  // Watchdog: legacy events fail silently, so if nothing has fired shortly
-  // after attaching, escalate to the API that actually reports its errors.
-  setTimeout(() => {
-    if (rawEvents > 0) return;
-    if (!startGenericSensor()) {
-      renderDiagnostics(
-        '⚠️ No sensor data',
-        'No orientation events fired and no fallback sensor is available. Check Chrome → Settings → Site settings → Motion sensors.',
-      );
-    }
-  }, 1500);
+  // Motion sensors disabled — control is 100% arrow- and button-driven.
+  return true;
 }
 
 /**
@@ -410,12 +307,18 @@ const dpadHeld = { up: false, down: false, left: false, right: false };
 function sendCursor() {
   if (!streaming || !socket.connected) return;
   const now = performance.now();
+  const bank = dpadHeld.left ? -35 : (dpadHeld.right ? 35 : 0);
+  const pitch = dpadHeld.up ? 25 : (dpadHeld.down ? -25 : 0);
   const alpha = (0.5 - cursor.x) * 40;
-  const beta = (0.5 - cursor.y) * 40 + 45;
+  const beta = pitch + 45;
+  const gamma = bank;
   socket.emit('orientation', {
     alpha,
     beta,
-    gamma: 0,
+    gamma,
+    bank,
+    pitch,
+    arrows: { ...dpadHeld },
     cursor: { x: cursor.x, y: cursor.y },
     t: now,
   });
